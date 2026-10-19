@@ -3,10 +3,408 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LLaCO</title>
+  <title>LLaCO: Continuous Diffusion for Large Language Models</title>
+  <meta name="description" content="LLaCO: Continuous Diffusion for Large Language Models with Competition-Aware Semantic Scheduling.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #fcfcfb;
+      --surface-2: #f4f4f2;
+      --ink: #1b1b1a;
+      --ink-2: #52514e;
+      --ink-3: #8a8984;
+      --rule: #e3e2de;
+      --accent: #2a78d6;
+      --series-1: #2a78d6;  /* LLaCO */
+      --series-2: #eb6834;  /* DSL-LLaDA */
+      --series-3: #1baf7a;  /* TESS-2 */
+      --btn: #2b2b2a;
+      --btn-off: #9b9a95;
+      --maxw: 960px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Noto Sans", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 17px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 16px; }
+
+    /* ---------- header ---------- */
+    header.hero { text-align: center; padding: 40px 0 8px; }
+    .logos { display: flex; justify-content: center; align-items: center; gap: 28px; margin-bottom: 28px; flex-wrap: wrap; }
+    .logos img { height: 52px; width: auto; }
+    .logos img.wide { height: 40px; }
+    h1.title {
+      font-size: clamp(26px, 4.2vw, 40px);
+      line-height: 1.25;
+      font-weight: 700;
+      margin: 0 auto 12px;
+      max-width: 900px;
+      letter-spacing: -0.01em;
+    }
+    .tagline { font-size: clamp(16px, 2.2vw, 19px); color: var(--ink-2); margin: 0 auto 22px; max-width: 760px; }
+    .authors { font-size: 17px; margin: 0 auto 8px; max-width: 880px; }
+    .authors span { white-space: nowrap; margin: 0 6px; }
+    .authors sup { font-size: 0.68em; color: var(--ink-2); margin-left: 1px; }
+    .affils { font-size: 14.5px; color: var(--ink-2); margin: 10px auto 6px; max-width: 880px; line-height: 1.6; }
+    .affils span { display: inline-block; margin: 0 8px; }
+    .affils sup { font-size: 0.75em; }
+    .notes { font-size: 13.5px; color: var(--ink-3); margin: 4px 0 24px; }
+    .buttons { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 18px; border-radius: 999px;
+      background: var(--btn); color: #fff; text-decoration: none;
+      font-size: 15px; font-weight: 500; line-height: 1;
+    }
+    .btn.off { background: var(--btn-off); cursor: default; }
+    .btn .soon { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; background: rgba(255,255,255,.22); padding: 3px 7px; border-radius: 999px; }
+    .btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* ---------- sections ---------- */
+    section { padding: 36px 0 8px; }
+    h2 {
+      font-size: 26px; font-weight: 700; text-align: center;
+      margin: 0 0 18px; letter-spacing: -0.005em;
+    }
+    h3 { font-size: 19px; font-weight: 600; margin: 26px 0 8px; }
+    p { margin: 0 0 14px; }
+    .lead { color: var(--ink); }
+    .tldr {
+      background: var(--surface-2); border-left: 4px solid var(--accent);
+      border-radius: 6px; padding: 16px 20px; margin: 0 auto;
+    }
+    .tldr b { font-weight: 700; }
+    figure { margin: 18px 0 8px; }
+    figure img { width: 100%; height: auto; display: block; border-radius: 4px; }
+    figure.wide { width: min(1240px, calc(100vw - 32px)); position: relative; left: 50%; transform: translateX(-50%); }
+    figure.wide figcaption { max-width: var(--maxw); margin-left: auto; margin-right: auto; padding: 0 16px; }
+    figcaption { font-size: 14.5px; color: var(--ink-2); margin-top: 10px; line-height: 1.55; }
+    figcaption b { color: var(--ink); }
+    .insight {
+      border: 1px solid var(--rule); border-radius: 10px;
+      padding: 18px 20px 6px; margin: 22px 0;
+      background: var(--surface);
+    }
+    .insight .tag { font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+    .insight h3 { margin-top: 4px; }
+    ol.method { padding-left: 22px; margin: 6px 0 14px; }
+    ol.method li { margin-bottom: 8px; }
+    .katex { font-size: 1.04em; }
+
+    /* ---------- radar chart ---------- */
+    .chart-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 18px 16px 10px; margin: 26px auto 0; max-width: 760px; position: relative; }
+    .chart-title { font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 2px; }
+    .chart-sub { font-size: 13.5px; color: var(--ink-2); text-align: center; margin: 0 0 10px; }
+    .legend { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; font-size: 14px; color: var(--ink); margin-bottom: 4px; }
+    .legend .item { display: inline-flex; align-items: center; gap: 7px; }
+    .legend svg { width: 28px; height: 12px; }
+    #radar { width: 100%; height: auto; display: block; overflow: visible; }
+    #radar .grid { fill: none; stroke: var(--rule); stroke-width: 1; }
+    #radar .spoke { stroke: var(--rule); stroke-width: 1; }
+    #radar .tick { font-size: 12.5px; fill: var(--ink-3); }
+    #radar .axis-label { font-size: 16px; fill: var(--ink); font-weight: 500; }
+    #radar .hit { fill: transparent; cursor: pointer; }
+    #radar .hit:hover, #radar .hit.active { fill: rgba(42,120,214,.05); }
+    .tooltip {
+      position: absolute; pointer-events: none; opacity: 0; transition: opacity .12s;
+      background: #fff; border: 1px solid var(--rule); border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.08);
+      padding: 8px 11px; font-size: 13px; line-height: 1.5; min-width: 170px; color: var(--ink);
+    }
+    .tooltip .tt-h { font-weight: 600; margin-bottom: 3px; }
+    .tooltip .row { display: flex; justify-content: space-between; gap: 14px; }
+    .tooltip .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+    .tooltip .val { font-variant-numeric: tabular-nums; }
+
+    /* ---------- results table ---------- */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 10px 0 6px; border: 1px solid var(--rule); border-radius: 10px; }
+    table.results { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; font-variant-numeric: tabular-nums; }
+    table.results th, table.results td { padding: 7px 10px; text-align: center; white-space: nowrap; }
+    table.results th:first-child, table.results td:first-child { text-align: left; }
+    table.results thead th { font-weight: 600; border-bottom: 1.5px solid var(--ink); background: var(--surface); }
+    table.results tr.group td { font-style: italic; color: var(--ink-2); padding-top: 12px; border-top: 1px solid var(--rule); text-align: left; }
+    table.results tr.ours td { background: rgba(42,120,214,.07); }
+    table.results tr.abl td:first-child { padding-left: 26px; color: var(--ink-2); }
+    table.results tr.abl td { color: var(--ink-2); }
+    table.results tr.abl-first td { border-top: 1px dashed var(--rule); }
+    table.results b { font-weight: 700; color: var(--ink); }
+
+    pre.bib {
+      background: var(--surface-2); border-radius: 8px; padding: 16px 18px;
+      font-size: 13.5px; color: var(--ink-2); overflow-x: auto; margin: 0;
+    }
+    footer { text-align: center; font-size: 13px; color: var(--ink-3); padding: 40px 0 36px; }
+
+    @media (max-width: 600px) {
+      body { font-size: 16px; }
+      .chart-card { padding: 14px 6px 6px; }
+      #radar .axis-label { font-size: 24px; }
+      #radar .tick { font-size: 18px; }
+      .logos img { height: 40px; }
+      .logos img.wide { height: 30px; }
+      h2 { font-size: 22px; }
+    }
+  </style>
 </head>
-<body style="font-family: sans-serif; text-align: center; padding: 80px 16px;">
-  <h1>LLaCO: Continuous Diffusion for Large Language Models<br>with Competition-Aware Semantic Scheduling</h1>
-  <p>Project page coming soon.</p>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="logos">
+      <img src="static/images/logo_bupt.png" alt="Beijing University of Posts and Telecommunications">
+      <img src="static/images/logo_pku.png" alt="Peking University">
+      <img class="wide" src="static/images/logo_baai.png" alt="Beijing Academy of Artificial Intelligence">
+    </div>
+
+    <h1 class="title">LLaCO: Continuous Diffusion for Large Language Models with Competition-Aware Semantic Scheduling</h1>
+    <p class="tagline">A principled continuous diffusion paradigm for large language models, powered by Competition-Aware Semantic Scheduling.</p>
+
+    <div class="authors">
+      <span>Zijian Jia<sup>1*</sup></span>
+      <span>Peixuan Zhang<sup>1*</sup></span>
+      <span>Genying Li<sup>1</sup></span>
+      <span>Di Wu<sup>1</sup></span>
+      <span>Yujie Fu<sup>2</sup></span>
+      <span>Si Li<sup>1</sup></span>
+      <span>Boxin Shi<sup>3,4,5&#9993;</sup></span>
+      <span>Shuchen Weng<sup>3,4,6&#9993;</sup></span>
+    </div>
+    <div class="affils">
+      <span><sup>1</sup>School of Artificial Intelligence, Beijing University of Posts and Telecommunications</span>
+      <span><sup>2</sup>Yuanpei College, Peking University</span>
+      <span><sup>3</sup>School of Computer Science, Peking University</span>
+      <span><sup>4</sup>State Key Laboratory for Multimedia Information Processing, Peking University</span>
+      <span><sup>5</sup>National Engineering Research Center of Visual Technology, Peking University</span>
+      <span><sup>6</sup>Beijing Academy of Artificial Intelligence</span>
+    </div>
+    <div class="notes"><sup>*</sup> Equal contribution &nbsp;&nbsp; &#9993; Corresponding authors</div>
+
+    <div class="buttons">
+      <span class="btn off" aria-disabled="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8V12zm0 3.5h8V17H8v-1.5z"/></svg>
+        Paper <span class="soon">Coming soon</span>
+      </span>
+      <span class="btn off" aria-disabled="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.56-.29-5.25-1.28-5.25-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.7 5.38-5.26 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+        Code <span class="soon">Coming soon</span>
+      </span>
+      <span class="btn off" aria-disabled="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3L18.7 8 12 11.7 5.3 8 12 4.3zM5 9.7l6 3.3v6.6l-6-3.3V9.7zm8 9.9V13l6-3.3v6.6l-6 3.3z"/></svg>
+        Model <span class="soon">Coming soon</span>
+      </span>
+    </div>
+
+    <div class="chart-card" id="teaser">
+      <p class="chart-title">LLaCO-8B vs. continuous diffusion baselines</p>
+      <p class="chart-sub">Accuracy (%) on nine benchmarks under the same evaluation protocol</p>
+      <div class="legend" id="legend"></div>
+      <svg id="radar" viewBox="-60 0 760 530" role="img" aria-label="Radar chart comparing LLaCO-8B, DSL-LLaDA-8B and TESS-2-7B on nine benchmarks. Full numbers are in the results table."></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="tldr">
+    <div class="tldr">
+      <b>TL;DR.</b> In the directional space of pretrained token embeddings, a candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation. Since high-dimensional overtaking requires extreme noise levels, standard trajectories concentrate identity decay into a narrow window near the noisy endpoint. LLaCO reallocates the diffusion trajectory to follow this competition, and its 8B instantiation outperforms prior continuous diffusion baselines and rivals discrete diffusion models of the same scale.
+    </div>
+  </section>
+
+  <section id="abstract">
+    <h2>Abstract</h2>
+    <p>Continuous diffusion language models suffer from a fundamental geometric misalignment between continuous trajectories and discrete vocabulary identities. This compresses identity decay into a narrow terminal window, forcing standard diffusion to misallocate optimization budgets. To resolve this, we establish the Competition Threshold Theory to model directional token competition, and propose Semantic Retention Scheduling for logarithmic rank decay. Based on these principles, we propose LLaCO, a framework equipped with an embedding directional adapter, timestep-conditioned modulation, and mask-biased spherical noising. Extensive evaluations demonstrate that LLaCO-8B comprehensively outperforms prior continuous baselines and rivals discrete models.</p>
+  </section>
+
+  <section id="theory">
+    <h2>Competition Threshold Theory</h2>
+    <p>Along a linear noising trajectory, decoding by Euclidean distance causes the source token to lose its top-1 rank much earlier than cosine ranking (Fig.&nbsp;1(a)). The Euclidean score decouples into an alignment term that shrinks with the signal scale and a norm penalty that remains static. Even in the absence of noise, a candidate with a smaller norm can therefore overtake the source as the signal shrinks, showing that this premature decline can arise from embedding norm decay rather than noise. To remove this effect, we rank candidates by cosine similarity, ensuring that only directional noise drives competition.</p>
+    <figure>
+      <img src="static/images/identity_decay.png" alt="Identity decay along noising trajectories">
+      <figcaption><b>Figure 1. Identity decay along noising trajectories.</b> (a) Source-token top-1 retention of pretrained embeddings along a linear trajectory. (b, c) Endpoint-normalized retention statistics of unit token directions along the linear and spherical trajectories, respectively. (d) Preservation scale guaranteed by the full-spectrum bound versus the measured location at which identity decay reaches \(\delta\), plotted against the tolerance \(\delta\) on a separate sample; markers indicate \(\delta = 0.1\).</figcaption>
+    </figure>
+    <p>In this directional space, a candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation. For a corrupted state \(s = \alpha e_i + \beta z\), the cosine score gap between candidate \(j\) and source \(i\) is proportional to \(-(1 - a_{ij}) + \kappa\,(b_j - b_i)\), where \(\kappa = \beta / (\alpha \lVert e_i \rVert)\) is the effective noise magnitude, \(1 - a_{ij}\) the intrinsic semantic separation, and \(b_j - b_i\) the relative noise advantage. Candidate \(j\) thus overtakes the source if and only if \(\kappa\) exceeds the pairwise competition threshold</p>
+    $$\tau_{ij} = \frac{1 - a_{ij}}{b_j - b_i}, \qquad b_j > b_i.$$
+    <p>The rank of the source token counts the candidates whose thresholds have been crossed, and it is monotonically non-decreasing in \(\kappa\). We formalize these pairwise dynamics as the <i>Competition Threshold Theory</i>, which yields two theoretical insights.</p>
+
+    <div class="insight">
+      <div class="tag">Insight 1</div>
+      <h3>Existing token identity metrics correspond to different accumulation stages of token competition</h3>
+      <p>Since rank simply counts the total number of candidates that have overtaken the source, different retention metrics correspond to different weighting schemes across these overtaking events. Top-1 retention \(P\) collapses entirely at the first overtake, linear retention \(Q\) is diluted by the vast vocabulary tail, and our logarithmic retention \(Q_{\log}\) captures the intermediate decay of leading semantic ranks, with \(P \le Q_{\log} \le Q\) along any trajectory. Without parameter fitting, the theoretical predictions of all three statistics closely track empirical measurements on pretrained embeddings, with half-retention errors within 2% (Fig.&nbsp;2).</p>
+      <figure>
+        <img src="static/images/prediction_measurement.png" alt="Predicted and measured competition statistics against the effective noise magnitude">
+        <figcaption><b>Figure 2. Predicted and measured competition statistics on pretrained embeddings</b> against the effective noise magnitude \(\kappa\): (a) expected rank \(\mathbb{E}[r]\), (b) top-1 retention \(P\), (c) logarithmic retention \(Q_{\log}\), and (d) linear retention \(Q\). Retention statistics are endpoint-normalized. Lower panels show prediction errors; shading denotes 95% bootstrap intervals.</figcaption>
+      </figure>
+    </div>
+
+    <div class="insight">
+      <div class="tag">Insight 2</div>
+      <h3>Token representations and noise determine where competition occurs, while the trajectory parameterization determines when</h3>
+      <p>Pairwise thresholds depend solely on embedding geometry and noise realizations, independent of the time coordinate \(\gamma\). Consequently, any retention metric factorizes as</p>
+      $$R(\gamma) = \mathcal{R}_{\mathcal{D}}\big(\kappa(\gamma)\big),$$
+      <p>where the spatial retention \(\mathcal{R}_{\mathcal{D}}(\kappa)\) is governed by representation geometry and noise distribution, and \(\kappa(\gamma)\) maps spatial noise scales onto the trajectory. Spatially, high-dimensional overtaking requires extreme noise levels: the half-retention location grows as \(\sqrt{d}\) and reaches \(\kappa_{0.5} \approx 14\) for \(d = 4096\). Temporally, a linear trajectory follows the highly convex mapping \(\kappa(\gamma) = \gamma / (1 - \gamma)\), which compresses this transition into a narrow window near the noisy endpoint. The divergence between linear and spherical trajectories over time arises primarily from their distinct mappings \(\kappa(\gamma)\) (Fig.&nbsp;1(b, c)).</p>
+    </div>
+
+    <p>Standard trajectories thus trigger severe temporal compression, concentrating identity decay into a narrow window near the noisy endpoint. To resolve this, we reallocate timesteps along the diffusion trajectory to align with the progression of identity decay measured by \(Q_{\log}\), denoted as <i>Semantic Retention Scheduling</i>.</p>
+  </section>
+
+  <section id="method">
+    <h2>Method</h2>
+    <p>Building on these theoretical insights, LLaCO adapts a pretrained backbone to continuous representations and reallocates the denoising trajectory to align with the progression of identity decay.</p>
+    <figure>
+      <img src="static/images/pipeline.png" alt="Overview of the LLaCO framework">
+      <figcaption><b>Figure 3. Overview of the LLaCO framework.</b> (a) The model architecture features an embedding directional adapter and timestep-conditioned modulation to produce token probabilities for cross-entropy training and clean-direction estimation. (b) Spherical noising proceeds along a geodesic trajectory toward a mask-biased endpoint. (c) Semantic Retention Scheduling leverages logarithmic rank retention to reallocate the optimization budget during both training and inference.</figcaption>
+    </figure>
+    <ol class="method">
+      <li><b>Model architecture.</b> An embedding directional adapter and timestep-conditioned modulation adapt the pretrained backbone to continuous directional states, producing token probabilities for cross-entropy training and clean-direction estimation.</li>
+      <li><b>Spherical noising.</b> Formulated as a geodesic interpolation toward a mask-biased endpoint, the spherical noising process eliminates norm decay while preserving accurate token competition.</li>
+      <li><b>Semantic Retention Scheduling.</b> LLaCO reallocates the denoising trajectory proportionally to the logarithmic rank decay, dedicating maximum optimization budget to identity transitions during both training and inference.</li>
+    </ol>
+  </section>
+
+  <section id="results">
+    <h2>Results</h2>
+    <p>LLaCO comprehensively outperforms previous continuous diffusion baselines and rivals discrete diffusion models of comparable scale.</p>
+    <div class="table-wrap">
+      <table class="results">
+        <thead>
+          <tr><th>Model / configuration</th><th>ARC-E</th><th>ARC-C</th><th>MMLU</th><th>GPQA</th><th>BBH</th><th>GSM8K</th><th>MATH</th><th>HumanEval</th><th>MBPP</th></tr>
+        </thead>
+        <tbody>
+          <tr class="group"><td colspan="10">Discrete diffusion</td></tr>
+          <tr><td>LLaDA-8B</td><td>75.08</td><td>53.67</td><td>63.97</td><td>26.79</td><td>53.16</td><td>78.70</td><td>43.82</td><td>45.12</td><td>40.20</td></tr>
+          <tr><td>LLaDA-1.5-8B</td><td>79.46</td><td>55.20</td><td>64.19</td><td>27.01</td><td>52.72</td><td>79.38</td><td>44.26</td><td>46.34</td><td>43.20</td></tr>
+          <tr><td>Dream-7B</td><td><b>83.50</b></td><td><b>55.29</b></td><td>69.74</td><td>30.13</td><td><b>54.68</b></td><td>80.14</td><td>51.20</td><td><b>54.27</b></td><td><b>57.80</b></td></tr>
+          <tr class="ours"><td><b>LLaCO-8B</b></td><td>76.68</td><td>54.78</td><td><b>69.89</b></td><td><b>31.25</b></td><td>51.30</td><td><b>80.74</b></td><td><b>62.12</b></td><td>48.17</td><td>46.20</td></tr>
+          <tr class="group"><td colspan="10">Continuous diffusion</td></tr>
+          <tr><td>TESS-2-7B</td><td>66.58</td><td>38.05</td><td>47.98</td><td>30.13</td><td>37.05</td><td>23.96</td><td>4.70</td><td>1.22</td><td>8.60</td></tr>
+          <tr><td>DSL-LLaDA-8B</td><td>73.15</td><td>48.81</td><td>59.05</td><td>28.35</td><td>46.81</td><td>25.40</td><td>15.10</td><td>20.73</td><td>25.60</td></tr>
+          <tr class="ours"><td><b>LLaCO-8B</b></td><td><b>76.68</b></td><td><b>54.78</b></td><td><b>69.89</b></td><td><b>31.25</b></td><td><b>51.30</b></td><td><b>80.74</b></td><td><b>62.12</b></td><td><b>48.17</b></td><td><b>46.20</b></td></tr>
+          <tr class="abl abl-first"><td>\(P\) schedule</td><td>70.12</td><td>52.30</td><td>61.77</td><td>29.69</td><td>46.72</td><td>64.82</td><td>35.00</td><td>35.98</td><td>35.60</td></tr>
+          <tr class="abl"><td>\(Q\) schedule</td><td>72.43</td><td>53.84</td><td>65.74</td><td>30.80</td><td>48.61</td><td>77.56</td><td>58.30</td><td>40.24</td><td>37.20</td></tr>
+          <tr class="abl"><td>W/o mask-biased endpoint</td><td>74.83</td><td>54.01</td><td>67.28</td><td>30.58</td><td>48.16</td><td>79.23</td><td>60.02</td><td>30.49</td><td>36.60</td></tr>
+          <tr class="abl"><td>W/o spherical noising</td><td>74.58</td><td>54.58</td><td>67.35</td><td>31.03</td><td>49.09</td><td>78.39</td><td>59.22</td><td>43.29</td><td>41.40</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:14.5px;color:var(--ink-2)">Overall performance comparison and ablations. Models are grouped by generation paradigm, with LLaCO-8B listed in both groups for reference. Indented rows under LLaCO-8B alter a single factor of the default configuration and are retrained. Bold values denote the best result within each primary group.</p>
+  </section>
+
+  <section id="citation">
+    <h2>Citation</h2>
+    <pre class="bib">BibTeX coming soon with the arXiv release.</pre>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">&copy; 2026 The LLaCO Authors</div>
+</footer>
+
+<script>
+(function () {
+  const axes = ["ARC-E", "ARC-C", "MMLU", "GPQA", "BBH", "GSM8K", "MATH", "HumanEval", "MBPP"];
+  const series = [
+    { name: "LLaCO-8B",     color: "var(--series-1)", hex: "#2a78d6", dash: "",      fill: 0.16, marker: "circle",
+      v: [76.68, 54.78, 69.89, 31.25, 51.30, 80.74, 62.12, 48.17, 46.20] },
+    { name: "DSL-LLaDA-8B", color: "var(--series-2)", hex: "#eb6834", dash: "6 4",   fill: 0,    marker: "square",
+      v: [73.15, 48.81, 59.05, 28.35, 46.81, 25.40, 15.10, 20.73, 25.60] },
+    { name: "TESS-2-7B",    color: "var(--series-3)", hex: "#1baf7a", dash: "2 4",   fill: 0,    marker: "diamond",
+      v: [66.58, 38.05, 47.98, 30.13, 37.05, 23.96, 4.70, 1.22, 8.60] }
+  ];
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("radar");
+  const tip = document.getElementById("tooltip");
+  const card = document.getElementById("teaser");
+  const cx = 320, cy = 268, R = 205, vmax = 90, ticks = [20, 40, 60, 80];
+  const n = axes.length;
+  const ang = i => -Math.PI / 2 + (2 * Math.PI * i) / n;
+  const pt = (i, v) => [cx + (R * v / vmax) * Math.cos(ang(i)), cy + (R * v / vmax) * Math.sin(ang(i))];
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; };
+
+  // grid
+  ticks.forEach(t => {
+    el("polygon", { class: "grid", points: axes.map((_, i) => pt(i, t).join(",")).join(" ") });
+    const a = -Math.PI / 2 + Math.PI / n;   // place tick labels between the first two spokes
+    const tx = cx + (R * t / vmax) * Math.cos(a), ty = cy + (R * t / vmax) * Math.sin(a);
+    el("text", { class: "tick", x: tx + 3, y: ty - 3 }).textContent = t;
+  });
+  axes.forEach((a, i) => {
+    const [x, y] = pt(i, vmax);
+    el("line", { class: "spoke", x1: cx, y1: cy, x2: x, y2: y });
+    const [lx, ly] = pt(i, vmax + 11);
+    const c = Math.cos(ang(i));
+    const t = el("text", { class: "axis-label", x: lx, y: ly + 4, "text-anchor": Math.abs(c) < 0.2 ? "middle" : (c > 0 ? "start" : "end") });
+    t.textContent = a;
+  });
+
+  // series (draw baselines first, LLaCO on top)
+  const markerPath = (m, x, y, s) => {
+    if (m === "square") return `M${x - s} ${y - s}h${2 * s}v${2 * s}h${-2 * s}z`;
+    if (m === "diamond") return `M${x} ${y - s * 1.3}L${x + s * 1.3} ${y}L${x} ${y + s * 1.3}L${x - s * 1.3} ${y}z`;
+    return `M${x - s} ${y}a${s} ${s} 0 1 0 ${2 * s} 0a${s} ${s} 0 1 0 ${-2 * s} 0`;
+  };
+  const markers = [];
+  [...series].reverse().forEach(s => {
+    const pts = s.v.map((v, i) => pt(i, v));
+    el("polygon", { points: pts.map(p => p.join(",")).join(" "), fill: s.hex, "fill-opacity": s.fill,
+                    stroke: s.hex, "stroke-width": 2, "stroke-dasharray": s.dash, "stroke-linejoin": "round" });
+    pts.forEach((p, i) => {
+      const m = el("path", { d: markerPath(s.marker, p[0], p[1], 4), fill: s.hex, stroke: "#fcfcfb", "stroke-width": 1.5 });
+      markers.push({ i, m });
+    });
+  });
+
+  // legend (identity never by color alone: dash + marker shape)
+  const legend = document.getElementById("legend");
+  series.forEach(s => {
+    const item = document.createElement("span"); item.className = "item";
+    item.innerHTML = `<svg viewBox="0 0 28 12" aria-hidden="true"><line x1="1" y1="6" x2="27" y2="6" stroke="${s.hex}" stroke-width="2" stroke-dasharray="${s.dash}"/><path d="${markerPath(s.marker, 14, 6, 3.2)}" fill="${s.hex}"/></svg>${s.name}`;
+    legend.appendChild(item);
+  });
+
+  // hover: one wedge per axis, tooltip lists all three models
+  axes.forEach((a, i) => {
+    const a0 = ang(i) - Math.PI / n, a1 = ang(i) + Math.PI / n, rr = R + 30;
+    const d = `M${cx} ${cy}L${cx + rr * Math.cos(a0)} ${cy + rr * Math.sin(a0)}A${rr} ${rr} 0 0 1 ${cx + rr * Math.cos(a1)} ${cy + rr * Math.sin(a1)}Z`;
+    const w = el("path", { class: "hit", d, tabindex: 0, "aria-label": a });
+    const show = (evt) => {
+      w.classList.add("active");
+      markers.forEach(o => o.m.setAttribute("transform", ""));
+      markers.filter(o => o.i === i).forEach(o => { const bb = o.m.getBBox(); const x = bb.x + bb.width / 2, y = bb.y + bb.height / 2; o.m.setAttribute("transform", `translate(${x} ${y}) scale(1.6) translate(${-x} ${-y})`); });
+      tip.innerHTML = `<div class="tt-h">${a}</div>` + series.map(s => `<div class="row"><span><span class="sw" style="background:${s.hex}"></span>${s.name}</span><span class="val">${s.v[i].toFixed(2)}</span></div>`).join("");
+      const box = card.getBoundingClientRect();
+      const [px, py] = pt(i, vmax * 0.9);
+      const sb = svg.getBoundingClientRect();
+      const tw = tip.offsetWidth || 190, th = tip.offsetHeight || 90;
+      const right = Math.cos(ang(i)) >= -0.05;
+      let left = sb.left - box.left + (px + 60) * sb.width / 760 + (right ? 16 : -16 - tw);
+      let top = sb.top - box.top + py * sb.height / 530 - th / 2;
+      left = Math.min(Math.max(8, left), box.width - tw - 8);
+      top = Math.min(Math.max(8, top), box.height - th - 8);
+      tip.style.left = left + "px"; tip.style.top = top + "px"; tip.style.opacity = 1;
+    };
+    const hide = () => { w.classList.remove("active"); tip.style.opacity = 0; markers.forEach(o => o.m.setAttribute("transform", "")); };
+    w.addEventListener("mouseenter", show); w.addEventListener("focus", show);
+    w.addEventListener("mouseleave", hide); w.addEventListener("blur", hide);
+    w.addEventListener("touchstart", show, { passive: true });
+  });
+})();
+</script>
 </body>
 </html>
