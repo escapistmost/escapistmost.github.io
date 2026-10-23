@@ -281,28 +281,35 @@
 
   <section id="theory">
     <h2>Theoretical Foundation</h2>
+    <p>Why do continuous diffusion language models misallocate their optimization budget? We analyze how token identity decays under noise and arrive at the following findings.</p>
 
     <div class="insight">
       <div class="tag">Competition Threshold Theory</div>
-      <h3>A candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation</h3>
-      <p>Token competition must be evaluated directionally: under Euclidean decoding, embedding norm decay yields spurious overtaking, so the source token loses its top-1 rank far earlier than under cosine ranking (Fig.&nbsp;2(a)). In this directional space, each candidate has a pairwise competition threshold, and the rank of the source token counts the candidates whose thresholds have been crossed. Our theoretical bound further guarantees that the source token remains top-1 up to large noise levels (Fig.&nbsp;2(d)): high-dimensional overtaking requires extreme noise levels.</p>
+      <ol class="method">
+        <li><b>Token competition must be evaluated directionally.</b> Comparing Euclidean decoding with cosine ranking, we find that Euclidean decoding loses the source token far earlier. This is because embedding norm decay causes spurious overtaking: as the signal decays, candidates with smaller norms overtake the source token even without noise (Fig.&nbsp;2(a)).</li>
+        <li><b>A candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation.</b> Decomposing the score gap into semantic separation and relative noise advantage, we find that the rank of the source token simply counts the candidates that have crossed this threshold (Fig.&nbsp;3(a)).</li>
+        <li><b>High-dimensional overtaking requires extreme noise levels.</b> Even for 10% of source tokens to lose their top-1 rank, the effective noise magnitude must reach about 11 (Fig.&nbsp;2(d)).</li>
+      </ol>
     </div>
 
     <div class="insight">
       <div class="tag">Semantic Retention Scheduling</div>
-      <h3>Diffusion time should be allocated according to the progression of identity decay</h3>
-      <p>Competition thresholds do not depend on time: representation geometry determines at which noise level identity decays, while the trajectory only determines when. Standard trajectories therefore concentrate identity decay into a narrow window near the noisy endpoint (Fig.&nbsp;2(b, c)), spending over 90% of the optimization budget on stagnant phases. We instead reallocate timesteps to follow the progression of identity decay.</p>
-      <p>Identity decay is measured by retention statistics that weight the same overtaking events differently. Top-1 retention \(P\) only tracks whether the source token is still ranked first and collapses at the first overtake; linear retention \(Q\) counts overtaking events linearly and is diluted by the vast vocabulary tail; our proposed logarithmic retention \(Q_{\log}\) counts them logarithmically, capturing the critical decay of leading semantic ranks. Without parameter fitting, the theoretical predictions of all three closely track measurements on pretrained embeddings (Fig.&nbsp;3).</p>
+      <ol class="method" start="4">
+        <li><b>Existing identity metrics are different statistics of the same overtaking events.</b> \(P\), the probability that the source token still ranks first, collapses at the first overtake; \(Q\), the fraction of candidates yet to overtake the source, is diluted by the vast vocabulary tail; our proposed logarithmic retention \(Q_{\log}\), its logarithmic counterpart, captures the critical decay of leading semantic ranks.</li>
+        <li><b>Representation geometry determines at which noise level identity decays, while the trajectory determines when.</b> Since competition thresholds are independent of time, standard trajectories concentrate identity decay into a narrow window near the noisy endpoint, spending over 90% of the optimization budget on phases where identity barely changes (Fig.&nbsp;2(b, c)). We therefore reallocate timesteps according to \(Q_{\log}\).</li>
+      </ol>
     </div>
+
+    <p>Without parameter fitting, these theoretical predictions closely track measurements on pretrained embeddings (Fig.&nbsp;3).</p>
 
     <figure>
       <img src="static/images/identity_decay.png" alt="Identity decay along noising trajectories">
-      <figcaption><b>Figure 2. Identity decay along continuous noising trajectories.</b> In (a)&ndash;(c), the horizontal axis is trajectory time \(\gamma\), from the clean endpoint (\(\gamma = 0\)) to the noisy endpoint (\(\gamma = 1\)). (a) Top-1 retention along a linear trajectory: Euclidean decoding loses the source token far earlier than cosine ranking. (b, c) Retention statistics \(P\), \(Q_{\log}\), and \(Q\) along the linear and spherical geodesic trajectories, shown for \(\gamma \in [0.8, 1]\): identity decay concentrates near the noisy endpoint. (d) The largest effective noise magnitude \(\kappa\) at which our theoretical bound guarantees identity decay within tolerance \(\delta\) (orange), versus the measured \(\kappa\) at which identity decay reaches \(\delta\) (black).</figcaption>
+      <figcaption><b>Figure 2. Identity decay along continuous noising trajectories.</b> In (a)&ndash;(c), the horizontal axis is trajectory time \(\gamma\), from the clean endpoint (\(\gamma = 0\)) to the noisy endpoint (\(\gamma = 1\)). (a) Top-1 rate of the source token under Euclidean decoding and cosine ranking along a linear trajectory. (b, c) \(P\), \(Q_{\log}\), and \(Q\) along the linear and spherical geodesic trajectories. (d) Effective noise magnitude \(\kappa\) at which a fraction \(\delta\) of source tokens lose their top-1 rank: measured (black) and the lower bound guaranteed by our theory (orange).</figcaption>
     </figure>
 
     <figure>
       <img src="static/images/prediction_measurement.png" alt="Predicted and measured competition statistics against the effective noise magnitude">
-      <figcaption><b>Figure 3. Predicted versus measured competition statistics on pretrained embeddings</b>, plotted against the effective noise magnitude \(\kappa\): (a) expected rank \(\mathbb{E}[r]\), (b) \(P\), (c) our \(Q_{\log}\), and (d) \(Q\). Black lines and purple circles are measurements under Gaussian and uniform spherical endpoints; orange solid and blue dashed lines are the spectrum-aware and near-orthogonal theoretical predictions, both without parameter fitting. Lower panels show prediction errors.</figcaption>
+      <figcaption><b>Figure 3. Predicted versus measured competition statistics on pretrained embeddings</b> against the effective noise magnitude \(\kappa\): (a) expected rank \(\mathbb{E}[r]\), (b) \(P\), (c) \(Q_{\log}\), and (d) \(Q\). Lower panels show prediction errors.</figcaption>
     </figure>
   </section>
 
