@@ -227,60 +227,8 @@
 
   <section id="tldr">
     <div class="tldr">
-      <b>TL;DR.</b> In the directional space of pretrained token embeddings, a candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation. Since high-dimensional overtaking requires extreme noise levels, standard trajectories concentrate identity decay into a narrow window near the noisy endpoint. LLaCO reallocates the diffusion trajectory to follow this competition, and its 8B instantiation outperforms prior continuous diffusion baselines and rivals discrete diffusion models of comparable scale.
+      <b>TL;DR.</b> We propose LLaCO-8B, a continuous diffusion language model that comprehensively outperforms existing continuous diffusion language models TESS-2 and DSL-LLaDA, achieving state-of-the-art performance among continuous diffusion language models.
     </div>
-  </section>
-
-  <section id="abstract">
-    <h2>Abstract</h2>
-    <p>Continuous diffusion models have emerged as a promising non-autoregressive paradigm for text generation, enabling bidirectional contextual planning and fine-grained semantic transitions over continuous embedding spaces. Along the continuous trajectory, the residual token identity in an intermediate state directly shapes the denoising objective at each step. However, the geometric trajectory strictly misaligns with temporal progression, triggering severe temporal compression near the noisy endpoint. In this paper, we show that embedding norm decay causes Euclidean distance to yield spurious overtaking, indicating that token competition must be evaluated directionally. In this space, a candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation. We formalize these pairwise dynamics as the <i>Competition Threshold Theory</i> (CTT). Crucially, high-dimensional overtaking requires extreme noise levels, causing standard trajectories to concentrate identity decay into a narrow window near the noisy endpoint. To resolve this, we propose <i>Semantic Retention Scheduling</i> (SRS) to align time allocation with the progression of identity decay, and demonstrate that existing token identity metrics are fundamentally statistical aggregations of these pairwise crossings. Building on these theoretical insights, we introduce <b>LLaCO</b>, a generative framework powered by <i>Competition-Aware Semantic Scheduling</i>. LLaCO adapts a pretrained backbone to continuous representations via an embedding directional adapter and timestep-conditioned modulation. To operate within the directional space, LLaCO employs a spherical noising process formulated as a geodesic interpolation toward a mask-biased endpoint, eliminating norm decay while preserving accurate token competition. Guided by SRS, LLaCO reallocates the denoising trajectory proportionally to the logarithmic rank decay, dedicating maximum optimization budget to critical identity transitions. Instantiated as an 8B model, LLaCO comprehensively outperforms previous continuous diffusion baselines across extensive benchmarks and rivals discrete diffusion models of comparable scale, laying a principled foundation for future exploration.</p>
-  </section>
-
-  <section id="theory">
-    <h2>Competition Threshold Theory</h2>
-    <p>Along a linear noising trajectory, decoding by Euclidean distance causes the source token to lose its top-1 rank much earlier than cosine ranking (Fig.&nbsp;1(a)). The Euclidean score decouples into an alignment term that shrinks with the signal scale and a norm penalty that remains static. Even in the absence of noise, a candidate with a smaller norm can therefore overtake the source as the signal shrinks, showing that this premature decline can arise from embedding norm decay rather than noise. To remove this effect, we rank candidates by cosine similarity, ensuring that only directional noise drives competition.</p>
-    <figure>
-      <img src="static/images/identity_decay.png" alt="Identity decay along noising trajectories">
-      <figcaption><b>Figure 1. Identity decay dynamics along continuous noising trajectories.</b> (a) Top-1 source-token retention across pretrained embeddings along a standard linear trajectory, comparing directional cosine ranking against Euclidean decoding. (b) Endpoint-normalized retention statistics of unit token directions evaluated along the linear noising trajectory. (c) Endpoint-normalized retention statistics of unit token directions evaluated along the spherical geodesic trajectory. (d) Comparison between the preservation scale guaranteed by our full-spectrum theoretical bound and the empirically measured location where identity decay reaches tolerance \(\delta\), evaluated across varying tolerance thresholds \(\delta\) with markers highlighting \(\delta = 0.1\).</figcaption>
-    </figure>
-    <p>In this directional space, a candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation. For a corrupted state \(s = \alpha e_i + \beta z\), the cosine score gap between candidate \(j\) and source \(i\) is proportional to \(-(1 - a_{ij}) + \kappa\,(b_j - b_i)\), where \(\kappa = \beta / (\alpha \lVert e_i \rVert)\) is the effective noise magnitude, \(1 - a_{ij}\) the intrinsic semantic separation, and \(b_j - b_i\) the relative noise advantage. Candidate \(j\) thus overtakes the source if and only if \(\kappa\) exceeds the pairwise competition threshold</p>
-    $$\tau_{ij} = \frac{1 - a_{ij}}{b_j - b_i}, \qquad b_j > b_i.$$
-    <p>The rank of the source token counts the candidates whose thresholds have been crossed, and it is monotonically non-decreasing in \(\kappa\). We formalize these pairwise dynamics as the <i>Competition Threshold Theory</i>, which yields two theoretical insights.</p>
-
-    <div class="insight">
-      <div class="tag">Insight 1</div>
-      <h3>Existing token identity metrics correspond to different accumulation stages of token competition</h3>
-      <p>Since rank simply counts the total number of candidates that have overtaken the source, different retention metrics correspond to different weighting schemes across these overtaking events. Top-1 retention \(P\) collapses entirely at the first overtake, linear retention \(Q\) is diluted by the vast vocabulary tail, and our logarithmic retention \(Q_{\log}\) captures the intermediate decay of leading semantic ranks, with \(P \le Q_{\log} \le Q\) along any trajectory. Without parameter fitting, the theoretical predictions of all three statistics closely track empirical measurements on pretrained embeddings, with half-retention errors within 2% (Fig.&nbsp;2).</p>
-      <figure>
-        <img src="static/images/prediction_measurement.png" alt="Predicted and measured competition statistics against the effective noise magnitude">
-        <figcaption><b>Figure 2. Predicted and measured competition statistics on pretrained embeddings</b> against the effective noise magnitude \(\kappa\): (a) expected rank \(\mathbb{E}[r]\), (b) top-1 retention \(P\), (c) logarithmic retention \(Q_{\log}\), and (d) linear retention \(Q\). Retention statistics are endpoint-normalized. Lower panels show prediction errors; shading denotes 95% bootstrap intervals.</figcaption>
-      </figure>
-    </div>
-
-    <div class="insight">
-      <div class="tag">Insight 2</div>
-      <h3>Token representations and noise determine where competition occurs, while the trajectory parameterization determines when</h3>
-      <p>Pairwise thresholds depend solely on embedding geometry and noise realizations, independent of the time coordinate \(\gamma\). Consequently, any retention metric factorizes as</p>
-      $$R(\gamma) = \mathcal{R}_{\mathcal{D}}\big(\kappa(\gamma)\big),$$
-      <p>where the spatial retention \(\mathcal{R}_{\mathcal{D}}(\kappa)\) is governed by representation geometry and noise distribution, and \(\kappa(\gamma)\) maps spatial noise scales onto the trajectory. Spatially, high-dimensional overtaking requires extreme noise levels: the half-retention location grows as \(\sqrt{d}\) and reaches \(\kappa_{0.5} \approx 14\) for \(d = 4096\). Temporally, a linear trajectory follows the highly convex mapping \(\kappa(\gamma) = \gamma / (1 - \gamma)\), which compresses this transition into a narrow window near the noisy endpoint. The divergence between linear and spherical trajectories over time arises primarily from their distinct mappings \(\kappa(\gamma)\) (Fig.&nbsp;1(b, c)).</p>
-    </div>
-
-    <p>Standard trajectories thus trigger severe temporal compression, concentrating identity decay into a narrow window near the noisy endpoint. To resolve this, we reallocate timesteps along the diffusion trajectory to align with the progression of identity decay measured by \(Q_{\log}\), denoted as <i>Semantic Retention Scheduling</i>.</p>
-  </section>
-
-  <section id="method">
-    <h2>Method</h2>
-    <p>Building on these theoretical insights, LLaCO adapts a pretrained backbone to continuous representations and reallocates the denoising trajectory to align with the progression of identity decay.</p>
-    <figure>
-      <img src="static/images/pipeline.png" alt="Overview of the LLaCO framework">
-      <figcaption><b>Figure 3. Overview of the LLaCO framework.</b> (a) The model architecture features an embedding directional adapter and timestep-conditioned modulation to produce token probabilities for cross-entropy training and clean-direction estimation. (b) Spherical noising proceeds along a geodesic trajectory toward a mask-biased endpoint. (c) Semantic Retention Scheduling leverages logarithmic rank retention to reallocate the optimization budget during both training and inference.</figcaption>
-    </figure>
-    <ol class="method">
-      <li><b>Model architecture.</b> An embedding directional adapter and timestep-conditioned modulation adapt the pretrained backbone to continuous directional states, producing token probabilities for cross-entropy training and clean-direction estimation.</li>
-      <li><b>Spherical noising.</b> Formulated as a geodesic interpolation toward a mask-biased endpoint, the spherical noising process eliminates norm decay while preserving accurate token competition.</li>
-      <li><b>Trajectory reallocation.</b> Guided by Semantic Retention Scheduling, LLaCO reallocates the denoising trajectory proportionally to the logarithmic rank decay, dedicating maximum optimization budget to identity transitions during both training and inference.</li>
-      <li><b>Blockwise denoising.</b> Text is generated block by block: each block starts from the mask-biased endpoint, is denoised along a uniform grid in semantic time via geodesic (SLERP) updates toward the predicted clean direction, and is then decoded and appended as clean context for subsequent blocks.</li>
-    </ol>
   </section>
 
   <section id="results">
@@ -309,6 +257,48 @@
       </table>
     </div>
     <p style="font-size:14.5px;color:var(--ink-2)">Overall performance comparison and ablations. Models are grouped by generation paradigm, with LLaCO-8B listed in both groups for reference. Indented rows under LLaCO-8B alter a single factor of the default configuration and are retrained. Bold values denote the best result within each primary group.</p>
+  </section>
+
+  <section id="abstract">
+    <h2>Abstract</h2>
+    <p>Continuous diffusion language models suffer from a fundamental geometric misalignment between continuous trajectories and discrete vocabulary identities. This compresses identity decay into a narrow terminal window, forcing standard diffusion to misallocate optimization budgets. To resolve this, we establish the Competition Threshold Theory to model directional token competition, and propose Semantic Retention Scheduling for logarithmic rank decay. Based on these principles, we propose LLaCO, a framework equipped with an embedding directional adapter, timestep-conditioned modulation, and mask-biased spherical noising. Extensive evaluations demonstrate that LLaCO-8B comprehensively outperforms prior continuous baselines and rivals discrete models.</p>
+  </section>
+
+  <section id="method">
+    <h2>Method</h2>
+    <p>LLaCO adapts a pretrained backbone to continuous representations and reallocates the denoising trajectory to align with the progression of identity decay.</p>
+    <figure>
+      <img src="static/images/pipeline.png" alt="Overview of the LLaCO framework">
+      <figcaption><b>Figure 1. Overview of the LLaCO framework.</b> (a) The model architecture features an embedding directional adapter and timestep-conditioned modulation to produce token probabilities for cross-entropy training and clean-direction estimation. (b) Spherical noising proceeds along a geodesic trajectory toward a mask-biased endpoint. (c) Semantic Retention Scheduling leverages logarithmic rank retention to reallocate the optimization budget during both training and inference.</figcaption>
+    </figure>
+    <ol class="method">
+      <li><b>Model architecture.</b> An embedding directional adapter and timestep-conditioned modulation adapt the pretrained backbone to continuous directional states, producing token probabilities for cross-entropy training and clean-direction estimation.</li>
+      <li><b>Spherical noising.</b> Formulated as a geodesic interpolation toward a mask-biased endpoint, the spherical noising process eliminates norm decay while preserving accurate token competition.</li>
+      <li><b>Trajectory reallocation.</b> Guided by Semantic Retention Scheduling, LLaCO reallocates the denoising trajectory proportionally to the logarithmic rank decay, dedicating maximum optimization budget to identity transitions during both training and inference.</li>
+      <li><b>Blockwise denoising.</b> Text is generated block by block: each block starts from the mask-biased endpoint, is denoised along a uniform grid in semantic time via geodesic (SLERP) updates toward the predicted clean direction, and is then decoded and appended as clean context for subsequent blocks.</li>
+    </ol>
+  </section>
+
+  <section id="theory">
+    <h2>Theoretical Foundation</h2>
+    <div class="insight">
+      <div class="tag">Competition Threshold Theory</div>
+      <h3>A candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation</h3>
+      <p>Embedding norm decay causes Euclidean distance to yield spurious overtaking: the source token loses its top-1 rank much earlier than under cosine ranking, even without noise (Fig.&nbsp;2(a)). Token competition must therefore be evaluated directionally. Existing token identity metrics are fundamentally statistical aggregations of these pairwise crossings, and the theoretical predictions closely track empirical measurements on pretrained embeddings without parameter fitting, with half-retention errors within 2% (Fig.&nbsp;3).</p>
+    </div>
+    <div class="insight">
+      <div class="tag">Semantic Retention Scheduling</div>
+      <h3>Time allocation should follow the progression of identity decay</h3>
+      <p>High-dimensional overtaking requires extreme noise levels: for 4096-dimensional embeddings, half of the source tokens lose their top-1 rank only when the effective noise magnitude reaches about 14. Standard trajectories thus trigger severe temporal compression, concentrating identity decay into a narrow window near the noisy endpoint (Fig.&nbsp;2(b, c)) and spending over 90% of the optimization budget on stagnant retention phases. We therefore reallocate timesteps along the diffusion trajectory to align with the progression of identity decay, measured by logarithmic rank retention.</p>
+    </div>
+    <figure>
+      <img src="static/images/identity_decay.png" alt="Identity decay along noising trajectories">
+      <figcaption><b>Figure 2. Identity decay dynamics along continuous noising trajectories.</b> (a) Top-1 source-token retention across pretrained embeddings along a standard linear trajectory, comparing directional cosine ranking against Euclidean decoding. (b) Endpoint-normalized retention statistics of unit token directions evaluated along the linear noising trajectory. (c) Endpoint-normalized retention statistics of unit token directions evaluated along the spherical geodesic trajectory. (d) Comparison between the preservation scale guaranteed by our full-spectrum theoretical bound and the empirically measured location where identity decay reaches tolerance \(\delta\), evaluated across varying tolerance thresholds \(\delta\) with markers highlighting \(\delta = 0.1\).</figcaption>
+    </figure>
+    <figure>
+      <img src="static/images/prediction_measurement.png" alt="Predicted and measured competition statistics against the effective noise magnitude">
+      <figcaption><b>Figure 3. Predicted and measured competition statistics on pretrained embeddings</b> against the effective noise magnitude \(\kappa\): (a) expected rank \(\mathbb{E}[r]\), (b) top-1 retention \(P\), (c) logarithmic retention \(Q_{\log}\), and (d) linear retention \(Q\). Retention statistics are endpoint-normalized. Lower panels show prediction errors; shading denotes 95% bootstrap intervals.</figcaption>
+    </figure>
   </section>
 
   <section id="citation">
