@@ -293,7 +293,7 @@
       <div class="tag">Competition Threshold Theory (CTT)</div>
       <ol class="method">
         <li><b>Token competition must be evaluated directionally.</b> Under Euclidean decoding, embedding norm decay alone causes spurious overtaking by smaller-norm candidates, even without noise, so the source token loses its top-1 rank far earlier than under cosine ranking (Fig.&nbsp;2(a)).</li>
-        <li><b>High-dimensional overtaking requires extreme noise levels.</b> On 4096-dimensional pretrained embeddings, source tokens largely hold their top-1 rank until the effective noise magnitude reaches \(\kappa = \text{noise magnitude} / \text{signal magnitude} \approx 11\), by which point only 10% have lost it (Fig.&nbsp;2(d)).</li>
+        <li><b>High-dimensional overtaking requires extreme noise levels.</b> On 4096-dimensional pretrained embeddings, source tokens largely hold their top-1 rank until the effective noise magnitude reaches \(\kappa = \text{noise magnitude} / \text{signal magnitude} \approx 11\), and even then only 10% have lost it (Fig.&nbsp;2(d)).</li>
       </ol>
     </div>
 
@@ -313,7 +313,7 @@
 
     <figure>
       <img src="static/images/identity_decay.png" alt="Identity decay along noising trajectories">
-      <figcaption><b>Figure 2. Identity decay along continuous noising trajectories.</b> In (a)&ndash;(c), the horizontal axis is trajectory time \(\gamma\), from the clean endpoint (\(\gamma = 0\)) to the noisy endpoint (\(\gamma = 1\)). (a) Top-1 rate of the source token under Euclidean decoding and cosine ranking along a linear trajectory. (b, c) \(P\), \(Q_{\log}\), and \(Q\) along the linear and spherical geodesic trajectories. (d) Effective noise magnitude \(\kappa\) at which a fraction \(\delta\) of source tokens lose their top-1 rank.</figcaption>
+      <figcaption><b>Figure 2. Identity decay along continuous noising trajectories.</b> In (a)&ndash;(c), the horizontal axis is trajectory time \(\gamma\), from the clean endpoint (\(\gamma = 0\)) to the noisy endpoint (\(\gamma = 1\)). (a) Top-1 rate of the source token under Euclidean decoding and cosine ranking along a linear trajectory. (b, c) \(P\), \(Q_{\log}\), and \(Q\) along the linear and spherical geodesic trajectories. (d) Effective noise magnitude \(\kappa\) required for a fraction \(\delta\) of source tokens to lose their top-1 rank.</figcaption>
     </figure>
 
     <figure>
