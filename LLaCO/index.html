@@ -285,7 +285,7 @@
 
     <figure>
       <img src="static/images/identity_anim_en.gif" alt="Animation: identity of the token language under a standard noise schedule versus LLaCO">
-      <figcaption>Adding noise to the token &ldquo;language&rdquo;; the vertical axis shows the rank of the source token on a log scale. Under a standard linear noise schedule (left), the source token stays at #1 for about 90% of the steps, and its entire rank decline is squeezed into the last ~7% of the steps. LLaCO allocates steps by \(Q_{\log}\), so the rank decline spans about 90% of the noising process (right). Ranks are measured for this token on pretrained embeddings and averaged in log space over 128 noise draws.</figcaption>
+      <figcaption>Adding noise to the token &ldquo;language&rdquo;; the vertical axis shows the rank of the source token (linear up to #10, log scale beyond). Under a standard linear noise schedule (left), the source token stays at #1 for about 90% of the steps, and its entire rank decline is squeezed into the last ~7% of the steps. LLaCO allocates steps by \(Q_{\log}\), so the rank decline spans about 90% of the noising process (right). Ranks are measured for this token on pretrained embeddings and averaged in log space over 128 noise draws.</figcaption>
     </figure>
 
     <div class="insight">
