@@ -281,30 +281,29 @@
 
   <section id="theory">
     <h2>Theoretical Foundation</h2>
-    <p>Why do continuous diffusion language models misallocate their optimization budget? We analyze how token identity decays under noise and arrive at the following findings.</p>
+    <p>Standard continuous diffusion spends most of its optimization budget on noise levels where the original token is still easy to recognize. Two theoretical results explain why and guide how LLaCO allocates its denoising steps.</p>
 
     <div class="insight">
       <div class="tag">Competition Threshold Theory</div>
       <ol class="method">
-        <li><b>Token competition must be evaluated directionally.</b> Comparing Euclidean decoding with cosine ranking, we find that Euclidean decoding loses the source token far earlier. This is because embedding norm decay causes spurious overtaking: as the signal decays, candidates with smaller norms overtake the source token even without noise (Fig.&nbsp;2(a)).</li>
-        <li><b>A candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation.</b> Decomposing the score gap into semantic separation and relative noise advantage, we find that the rank of the source token simply counts the candidates that have crossed this threshold (Fig.&nbsp;3(a)).</li>
-        <li><b>High-dimensional overtaking requires extreme noise levels.</b> Even for 10% of source tokens to lose their top-1 rank, the effective noise magnitude must reach about 11 (Fig.&nbsp;2(d)).</li>
+        <li><b>Token competition should be measured by direction, not Euclidean distance.</b> Under Euclidean decoding, embedding norm decay alone pushes smaller-norm tokens ahead of the original token, even without noise, so the original token is lost far earlier than under cosine ranking (Fig.&nbsp;2(a)).</li>
+        <li><b>In high dimensions, overtaking requires extreme noise.</b> A candidate overtakes the original token only when the noise strength exceeds their semantic separation, yet high-dimensional noise spreads over thousands of directions and contributes little along any single candidate. On 4096-dimensional pretrained embeddings, the noise must reach about 11 times the signal before even 10% of original tokens lose their top-1 rank (Fig.&nbsp;2(d)).</li>
       </ol>
     </div>
 
     <div class="insight">
       <div class="tag">Semantic Retention Scheduling</div>
-      <ol class="method" start="4">
-        <li><b>Existing identity metrics are different statistics of the same overtaking events.</b> \(P\), the probability that the source token still ranks first, collapses at the first overtake; \(Q\), the fraction of candidates yet to overtake the source, is diluted by the vast vocabulary tail; our proposed logarithmic retention \(Q_{\log}\), its logarithmic counterpart, captures the critical decay of leading semantic ranks.</li>
-        <li><b>Representation geometry determines at which noise level identity decays, while the trajectory determines when.</b> Since competition thresholds are independent of time, standard trajectories concentrate identity decay into a narrow window near the noisy endpoint, spending over 90% of the optimization budget on phases where identity barely changes (Fig.&nbsp;2(b, c)). We therefore reallocate timesteps according to \(Q_{\log}\).</li>
+      <ol class="method" start="3">
+        <li><b>Standard schedules spend over 90% of the optimization budget where little changes.</b> The embeddings determine how much noise it takes to lose the original token, while the noise schedule determines at which step this happens. Standard schedules reach that noise level only in the last few steps, squeezing the decline into a narrow window near the noisy end (Fig.&nbsp;2(b, c)).</li>
+        <li><b>LLaCO allocates denoising steps by the decline of the logarithmic rank \(Q_{\log}\).</b> \(P\), the probability that the original token still ranks first, misses the decline after the first overtake; \(Q\), the fraction of candidates yet to overtake it, lets the vast vocabulary wash out the critical early decline. Our logarithmic retention \(Q_{\log}\) captures the whole decline (Fig.&nbsp;2(b, c)).</li>
       </ol>
     </div>
 
-    <p>Without parameter fitting, these theoretical predictions closely track measurements on pretrained embeddings (Fig.&nbsp;3).</p>
+    <p>Our theory also predicts these statistics directly: without parameter fitting, the predicted curves nearly coincide with measurements on pretrained embeddings (Fig.&nbsp;3).</p>
 
     <figure>
       <img src="static/images/identity_decay.png" alt="Identity decay along noising trajectories">
-      <figcaption><b>Figure 2. Identity decay along continuous noising trajectories.</b> In (a)&ndash;(c), the horizontal axis is trajectory time \(\gamma\), from the clean endpoint (\(\gamma = 0\)) to the noisy endpoint (\(\gamma = 1\)). (a) Top-1 rate of the source token under Euclidean decoding and cosine ranking along a linear trajectory. (b, c) \(P\), \(Q_{\log}\), and \(Q\) along the linear and spherical geodesic trajectories. (d) Effective noise magnitude \(\kappa\) at which a fraction \(\delta\) of source tokens lose their top-1 rank: measured (black) and the lower bound guaranteed by our theory (orange).</figcaption>
+      <figcaption><b>Figure 2. Identity decay along continuous noising trajectories.</b> In (a)&ndash;(c), the horizontal axis is trajectory time \(\gamma\), from the clean endpoint (\(\gamma = 0\)) to the noisy endpoint (\(\gamma = 1\)). (a) Top-1 rate of the original token under Euclidean decoding and cosine ranking along a linear trajectory. (b, c) \(P\), \(Q_{\log}\), and \(Q\) along the linear and spherical geodesic trajectories. (d) Effective noise magnitude \(\kappa\) at which a fraction \(\delta\) of original tokens lose their top-1 rank: measured (black) and the lower bound guaranteed by our theory (orange).</figcaption>
     </figure>
 
     <figure>
