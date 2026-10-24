@@ -102,6 +102,7 @@
     }
     .insight .tag { font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
     .insight h3 { margin-top: 4px; }
+    .insight p { margin: 8px 0 12px; }
     ol.method { padding-left: 22px; margin: 6px 0 14px; }
     ol.method li { margin-bottom: 8px; }
     .katex { font-size: 1.04em; }
@@ -289,31 +290,35 @@
     </figure>
 
     <div class="insight">
-      <div class="tag">Competition Threshold Theory</div>
+      <div class="tag">Competition Threshold Theory (CTT)</div>
       <ol class="method">
         <li><b>Token competition must be evaluated directionally.</b> Under Euclidean decoding, embedding norm decay alone causes spurious overtaking by smaller-norm candidates, even without noise, so the source token loses its top-1 rank far earlier than under cosine ranking (Fig.&nbsp;2(a)).</li>
-        <li><b>High-dimensional overtaking requires extreme noise levels.</b> A candidate overtakes the source token only when the effective noise magnitude surpasses their semantic separation, yet high-dimensional noise contributes only a small projection along any single candidate. On 4096-dimensional pretrained embeddings, the effective noise magnitude must reach \(\kappa \approx 11\) before even 10% of source tokens lose their top-1 rank (Fig.&nbsp;2(d)).</li>
+        <li><b>High-dimensional overtaking requires extreme noise levels.</b> On 4096-dimensional pretrained embeddings, source tokens largely hold their top-1 rank until the effective noise magnitude reaches \(\kappa = \text{noise magnitude} / \text{signal magnitude} \approx 11\), by which point only 10% have lost it (Fig.&nbsp;2(d)).</li>
       </ol>
     </div>
 
     <div class="insight">
-      <div class="tag">Semantic Retention Scheduling</div>
-      <ol class="method" start="3">
-        <li><b>Standard schedules spend over 90% of the optimization budget on stagnant retention phases.</b> Representation geometry determines the noise level at which identity decays, while the noise schedule determines at which step this happens. Standard schedules reach that noise level only in the last few steps, concentrating identity decay into a narrow window near the noisy endpoint (Fig.&nbsp;2(b, c)).</li>
-        <li><b>LLaCO allocates denoising steps by the logarithmic retention \(Q_{\log}\).</b> \(P\), the probability that the source token remains top-1, collapses at the first overtake; \(Q\), the fraction of candidates yet to overtake the source, dilutes the critical early decay across the vast vocabulary tail. Our logarithmic retention \(Q_{\log}\) captures the critical decay of leading semantic ranks (Fig.&nbsp;2(b, c)).</li>
+      <div class="tag">Semantic Retention Scheduling (SRS)</div>
+      <p>Existing token identity metrics track the rank of the source token under noise: \(P\) is the probability that the source token remains top-1, and \(Q\) is the fraction of candidates yet to overtake the source.</p>
+      <ol class="method">
+        <li><b>Standard schedules spend over 90% of the optimization budget on stagnant retention phases.</b> They reach the noise level at which identity decays only in the last few steps, concentrating identity decay into a narrow window near the noisy endpoint (Fig.&nbsp;2(b, c)).</li>
+        <li><b>LLaCO allocates denoising steps by the logarithmic retention \(Q_{\log}\).</b> \(P\) collapses entirely at the first overtake, ignoring all subsequent decay, while \(Q\) is diluted by the vast vocabulary tail. By measuring rank decay on a logarithmic scale, our logarithmic retention \(Q_{\log}\) captures the critical intermediate decay of leading semantic ranks (Fig.&nbsp;2(b, c)).</li>
       </ol>
     </div>
 
-    <p>Our theory also predicts these retention statistics directly: without parameter fitting, the theoretical predictions closely track measurements on pretrained embeddings (Fig.&nbsp;3).</p>
+    <div class="insight" style="padding: 18px 20px;">
+      <div class="tag">Empirical Validation</div>
+      <p style="margin: 8px 0 0;">Our theory also predicts these retention statistics directly: without parameter fitting, the theoretical predictions closely match measurements on pretrained embeddings (Fig.&nbsp;3).</p>
+    </div>
 
     <figure>
       <img src="static/images/identity_decay.png" alt="Identity decay along noising trajectories">
-      <figcaption><b>Figure 2. Identity decay along continuous noising trajectories.</b> In (a)&ndash;(c), the horizontal axis is trajectory time \(\gamma\), from the clean endpoint (\(\gamma = 0\)) to the noisy endpoint (\(\gamma = 1\)). (a) Top-1 rate of the source token under Euclidean decoding and cosine ranking along a linear trajectory. (b, c) \(P\), \(Q_{\log}\), and \(Q\) along the linear and spherical geodesic trajectories. (d) Effective noise magnitude \(\kappa\) at which a fraction \(\delta\) of source tokens lose their top-1 rank: measured (black) and the lower bound guaranteed by our theory (orange).</figcaption>
+      <figcaption><b>Figure 2. Identity decay along continuous noising trajectories.</b> In (a)&ndash;(c), the horizontal axis is trajectory time \(\gamma\), from the clean endpoint (\(\gamma = 0\)) to the noisy endpoint (\(\gamma = 1\)). (a) Top-1 rate of the source token under Euclidean decoding and cosine ranking along a linear trajectory. (b, c) \(P\), \(Q_{\log}\), and \(Q\) along the linear and spherical geodesic trajectories. (d) Effective noise magnitude \(\kappa\) at which a fraction \(\delta\) of source tokens lose their top-1 rank, measured on pretrained embeddings.</figcaption>
     </figure>
 
     <figure>
       <img src="static/images/prediction_measurement.png" alt="Predicted and measured competition statistics against the effective noise magnitude">
-      <figcaption><b>Figure 3. Predicted versus measured competition statistics on pretrained embeddings</b> against the effective noise magnitude \(\kappa\): (a) expected rank \(\mathbb{E}[r]\), (b) \(P\), (c) \(Q_{\log}\), and (d) \(Q\). Lower panels show prediction errors.</figcaption>
+      <figcaption><b>Figure 3. Predicted versus measured competition statistics on pretrained embeddings.</b> Top row: predicted and measured (a) expected rank \(\mathbb{E}[r]\), (b) \(P\), (c) \(Q_{\log}\), and (d) \(Q\) against the effective noise magnitude \(\kappa\). Bottom row: prediction errors.</figcaption>
     </figure>
   </section>
 
